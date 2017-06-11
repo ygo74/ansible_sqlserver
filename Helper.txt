@@ -1,0 +1,1 @@
+Get-DscResource -Module xSQLServer | ForEach-Object {Invoke-AnsibleWinModuleGen -DscResourceName $_.Name -DscModuleName xSQLServer -TargetPath D:\devel\ansible\ansible_sqlserver\modules -TargetModuleName $("win_$($_.Name.ToLower())")}
