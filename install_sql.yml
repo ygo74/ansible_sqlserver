@@ -1,4 +1,4 @@
-- hosts: win2012
+- hosts: sql2016
   
 
   vars:
@@ -28,6 +28,11 @@
         password: '{{ account_installer_password }}'
   tasks:
 
+  - name: "win lcm configuration disabled "       
+    win_lcm5:
+      refresh_mode: 'Disabled'
+  
+  
 #            $Features = "SQLENGINE,FULLTEXT,RS,AS,IS"
 #            $Features = "SSMS,ADV_SSMS"
 #
