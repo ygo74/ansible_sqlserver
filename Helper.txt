@@ -1,1 +1,5 @@
 Get-DscResource -Module xSQLServer | ForEach-Object {Invoke-AnsibleWinModuleGen -DscResourceName $_.Name -DscModuleName xSQLServer -TargetPath D:\devel\ansible\ansible_sqlserver\modules -TargetModuleName $("win_$($_.Name.ToLower())")}
+
+
+#SSMS 2017
+https://download.microsoft.com/download/5/0/B/50B02ECB-CB5C-4C23-A1D3-DAB4467604DA/SSMS-Setup-ENU.exe

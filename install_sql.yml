@@ -4,6 +4,22 @@
   vars:
     sqlserver_diagnostic_level_debug: 0
     
+    sharepoint_users:
+      farm_account:
+        username: '{{ account_farm_username }}'
+        password: '{{ account_farm_password }}'
+        
+      web_account:
+        Domain:   '{{ account_web_domain | default(inventory_hostname | upper ) }}'
+        username: '{{ account_web_username }}'
+        password: '{{ account_web_password }}'
+        
+      service_account:
+        Domain:   '{{ account_service_domain | default(inventory_hostname | upper ) }}'
+        username: '{{ account_service_username }}'
+        password: '{{ account_service_password }}'
+    
+    
     sqlserver_common:
       sysadmin:
         domain:   '{{ account_sysadmin_domain | default(inventory_hostname | upper ) }}'
@@ -13,14 +29,18 @@
       features:
       - SQLENGINE
       - FULLTEXT
-      - RS
-      - AS
-      - IS
+#      - RS
+#      - AS
+#      - IS
       
       instance_name: 'MSSQL'
     
     sqlserver_installer:
       binaries_path: 'F:\'
+      download_packages_path:       'D:\SQlServer'
+      
+      dscResources:
+      - xSQLServer
       
       account:
         domain:   '{{ account_installer_domain | default(inventory_hostname | upper ) }}'  
@@ -28,10 +48,47 @@
         password: '{{ account_installer_password }}'
   tasks:
 
-  - name: "win lcm configuration disabled "       
-    win_lcm5:
-      refresh_mode: 'Disabled'
-  
+  - name: Ensure Sql folders for this sample
+    win_file:
+      path:    '{{ item }}'
+      state:   'directory'
+    with_items:
+    - '{{ sqlserver_installer.download_packages_path }}'
+    tags: always
+
+  - name: Create Sharepoint User
+    win_user:
+      UserName:            '{{ item.username }}'
+      Password_username:   '{{ item.Domain }}\{{ item.username }}'
+      Password_password:   '{{ item.password }}'
+      Ensure: 'Present'
+    with_items:
+    - '{{ sharepoint_users.service_account }}'
+    - '{{ sharepoint_users.web_account }}'
+    register: user_status
+    tags:
+    - user
+     
+     
+  - name: Display user_status
+    debug: var=user_status verbosity='{{ sharepoint_diagnostic_level_debug }}'
+    tags:
+    - user
+
+    
+  - block:  
+    - name: "win lcm configuration disabled "       
+      win_lcm5:
+        refresh_mode: 'Disabled'
+        
+    - name: Download Powershell Modules and DscResources
+      win_oneget:
+        name: '{{ item }}'
+      with_items: '{{ sharepoint_installer.dscResources }}'  
+
+    tags:
+    - bootstrap
+      
   
 #            $Features = "SQLENGINE,FULLTEXT,RS,AS,IS"
 #            $Features = "SSMS,ADV_SSMS"
