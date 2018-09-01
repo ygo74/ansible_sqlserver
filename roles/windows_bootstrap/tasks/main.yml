@@ -1,0 +1,14 @@
+- name: Import tasks for users and group management
+  import_tasks: users_and_groups.yml
+  tags:
+  - windows_bootstrap_users
+
+- name: Add or Remove Windows Feature
+  import_tasks: features.yml
+  tags:
+  - windows_bootstrap_features
+
+- name: Add or Remove powershell modules
+  import_tasks: posh_modules.yml
+  tags:
+  - windows_bootstrap_powershell

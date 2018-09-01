@@ -1,0 +1,19 @@
+- name: Install Windows Features
+  block:
+  - name: Install Windows features
+    win_feature:
+      name:                 '{{ item .name }}'
+      state:                '{{ item.present | default("present") }}'
+      include_sub_features: '{{ item.include_sub_features | default(false) }}'
+    register: windows_bootstrap_features_result
+    with_items:
+    - '{{ windows_bootstrap_features }}'
+
+  - name: Display windows feature installation status
+    debug:
+      var: windows_bootstrap_features_result       
+      verbosity: '{{ windows_bootstrap_diagnostic_level_debug }}'
+
+  - name: reboot if installing Web-Server feature requires it
+    win_reboot:
+    when:  windows_bootstrap_features_result.results | selectattr("restart_needed", "equalto", true) | list | length > 0

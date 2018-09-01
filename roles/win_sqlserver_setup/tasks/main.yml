@@ -1,0 +1,5 @@
+- name: Import tasks for users and group management
+  import_tasks: install.yml
+  when: win_sqlserver_setup_action == win_sqlserver_setup_action_install
+  tags:
+  - install_from_scratch

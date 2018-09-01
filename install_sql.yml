@@ -1,39 +1,42 @@
 - hosts: sql2016
+  gather_facts: false
   
 
   vars:
-    sqlserver_diagnostic_level_debug: 0
+    sqlserver_diagnostic_level_debug: 1
     
-    sharepoint_users:
-      farm_account:
-        username: '{{ account_farm_username }}'
-        password: '{{ account_farm_password }}'
-        
-      web_account:
-        Domain:   '{{ account_web_domain | default(inventory_hostname | upper ) }}'
-        username: '{{ account_web_username }}'
-        password: '{{ account_web_password }}'
-        
-      service_account:
-        Domain:   '{{ account_service_domain | default(inventory_hostname | upper ) }}'
-        username: '{{ account_service_username }}'
-        password: '{{ account_service_password }}'
-    
-    
-    sqlserver_common:
+    windows_features:
+    - name: 'NET-Framework-Core'
+    - name: 'NET-Framework-45-Core'
+    - name: 'DSC-Service'
+
+    powershell_modules:
+    - name: 'PackageManagement'
+    - name: 'PowershellGet'
+    - name: 'SqlServerDsc'
+
+    sqlserver_users:
       sysadmin:
-        domain:   '{{ account_sysadmin_domain | default(inventory_hostname | upper ) }}'
-        username: '{{ account_sysadmin_username }}'
-        password: '{{ account_sysadmin_password }}'
+        domain:   'SRV1'
+        username: 'sqladmin'
+        password: 'temporaryPassword.1'
+      sql_engine_service:
+        domain:   'SRV1'
+        username: 'sqlsvc'
+        password: 'temporaryPassword.1'
+      sql_agent_service:
+        domain:   'SRV1'
+        username: 'sqlagent'
+        password: 'temporaryPassword.1'
       
-      features:
+    features:
       - SQLENGINE
       - FULLTEXT
 #      - RS
 #      - AS
 #      - IS
       
-      instance_name: 'MSSQL'
+    instance_name: 'MSSQL'
     
     sqlserver_installer:
       binaries_path: 'F:\'
@@ -46,48 +49,111 @@
         domain:   '{{ account_installer_domain | default(inventory_hostname | upper ) }}'  
         username: '{{ account_installer_username }}'
         password: '{{ account_installer_password }}'
+  
+  roles:
+  - name: Bootstrap server for sql installation
+    role: windows_bootstrap
+    windows_bootstrap_features: '{{ windows_features }}'
+    windows_bootstrap_users:    '{{ sqlserver_users.values() }}'
+    windows_bootstrap_powershell_modules: '{{ powershell_modules }}'
+    tags:
+    - windows_bootstrap
+
   tasks:
 
-  - name: Ensure Sql folders for this sample
-    win_file:
-      path:    '{{ item }}'
-      state:   'directory'
-    with_items:
-    - '{{ sqlserver_installer.download_packages_path }}'
-    tags: always
+  - name: Install SQL Server
+    block:
+    - name: Mount the Sharepoint image
+      win_disk_image:
+        image_path: 'D:\en_sql_server_2016_standard_with_service_pack_2_x64_dvd_12124191.iso'
+        state: present
+      register: disk_image_result
 
-  - name: Create Sharepoint User
-    win_user:
-      UserName:            '{{ item.username }}'
-      Password_username:   '{{ item.Domain }}\{{ item.username }}'
-      Password_password:   '{{ item.password }}'
-      Ensure: 'Present'
-    with_items:
-    - '{{ sharepoint_users.service_account }}'
-    - '{{ sharepoint_users.web_account }}'
-    register: user_status
+    - name: Display mount image result
+      debug:
+        var: disk_image_result       
+
+    - name: install sql server
+      win_dsc:
+        resource_name:  SqlSetup
+        InstanceName:   'MSSQLSERVER'
+        Features:       'SQLENGINE'
+        SQLCollation:   'SQL_Latin1_General_CP1_CI_AS'
+        SQLSvcAccount_username: '{{ sqlserver_users.sql_engine_service.domain }}\{{ sqlserver_users.sql_engine_service.username }}'
+        SQLSvcAccount_password: '{{ sqlserver_users.sql_engine_service.password }}'
+        AgtSvcAccount_username: '{{ sqlserver_users.sql_agent_service.domain }}\{{ sqlserver_users.sql_agent_service.username }}'
+        AgtSvcAccount_password: '{{ sqlserver_users.sql_agent_service.password }}'
+        SQLSysAdminAccounts:    '{{ sqlserver_users.sysadmin.domain }}\{{ sqlserver_users.sysadmin.username }}'
+        InstallSharedDir:       'C:\Program Files\Microsoft SQL Server'
+        InstallSharedWOWDir:    'C:\Program Files (x86)\Microsoft SQL Server'
+        InstanceDir:            'C:\Program Files\Microsoft SQL Server'
+        InstallSQLDataDir:      'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
+        SQLUserDBDir:           'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
+        SQLUserDBLogDir:        'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
+        SQLTempDBDir:           'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
+        SQLTempDBLogDir:        'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
+        SQLBackupDir:           'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Backup'
+        SourcePath:             '{{ disk_image_result.mount_path }}'
+        UpdateEnabled:          false
+        ForceReboot:            false
+        BrowserSvcStartupType:  'Automatic'
+        PsDscRunAsCredential_username: '{{ ansible_user }}'
+        PsDscRunAsCredential_password: '{{ ansible_password }}'
+
+    - name: Activate Windows Firewall rules
+      win_dsc:
+        resource_name:  SqlWindowsFirewall
+        SourcePath:     '{{ disk_image_result.mount_path }}'
+        InstanceName:   'MSSQLSERVER'
+        Features:       'SQLENGINE'
+
     tags:
-    - user
-     
-     
-  - name: Display user_status
-    debug: var=user_status verbosity='{{ sharepoint_diagnostic_level_debug }}'
+    - sqlserver_install
+
+  - name: Install SQL Serer Management studio
+    block:
+    - name: Ensure Sources directory
+      win_file:
+        path:  'c:\sources'
+        state: directory
+
+    - name: Download SQl Server Management studio
+      win_get_url:
+        url:  'https://download.microsoft.com/download/0/5/B/05B2AF8F-906F-4C57-A58E-5780F64F9D62/SSMS-Setup-ENU.exe'
+        dest: 'c:\sources\SSMS-Setup-ENU.exe'
+
+    - name: Install SQL Server Management studio
+      win_package:
+        name:       'SSMS-Setup-ENU'
+        path:       'c:\sources\SSMS-Setup-ENU.exe'
+        product_id: '31769AA7-DDF3-463E-9E25-752362EAA5B2'
+        arguments:  '/install /passive /norestart'
     tags:
-    - user
+    - sqlserver_management_studio_install
+
+
+  # - name: Ensure Sql folders for this sample
+  #   win_file:
+  #     path:    '{{ item }}'
+  #     state:   'directory'
+  #   with_items:
+  #   - '{{ sqlserver_installer.download_packages_path }}'
+  #   tags: always     
+     
 
     
-  - block:  
-    - name: "win lcm configuration disabled "       
-      win_lcm5:
-        refresh_mode: 'Disabled'
+  # - block:  
+  #   - name: "win lcm configuration disabled "       
+  #     win_lcm5:
+  #       refresh_mode: 'Disabled'
         
-    - name: Download Powershell Modules and DscResources
-      win_oneget:
-        name: '{{ item }}'
-      with_items: '{{ sharepoint_installer.dscResources }}'  
+  #   - name: Download Powershell Modules and DscResources
+  #     win_oneget:
+  #       name: '{{ item }}'
+  #     with_items: '{{ sharepoint_installer.dscResources }}'  
 
-    tags:
-    - bootstrap
+  #   tags:
+  #   - bootstrap
       
   
 #            $Features = "SQLENGINE,FULLTEXT,RS,AS,IS"
@@ -119,16 +185,16 @@
 #                    ASConfigDir = "O:\Program Files\Microsoft SQL Server\MSAS11.MSSQLSERVER\OLAP\Config"
 #                }
 #
-  - name:
-    win_sqlserversetup:
-      SourcePath:               '{{ sqlserver_installer.binaries_path }}'  
-      Features:                 '{{ sqlserver_common.features | join(",") }}'
-      SetupCredential_username: '{{ sqlserver_installer.account.domain }}\{{ sqlserver_installer.account.username }}'
-      SetupCredential_password: '{{ sqlserver_installer.account.password }}'
-      SQLSysAdminAccounts:      '{{ sqlserver_common.sysadmin.domain }}\{{ sqlserver_common.sysadmin.username }}'
-      InstanceName:             '{{ sqlserver_common.instance_name }}'
-    tags:
-    - engine    
+  # - name:
+  #   win_sqlserversetup:
+  #     SourcePath:               '{{ sqlserver_installer.binaries_path }}'  
+  #     Features:                 '{{ sqlserver_common.features | join(",") }}'
+  #     SetupCredential_username: '{{ sqlserver_installer.account.domain }}\{{ sqlserver_installer.account.username }}'
+  #     SetupCredential_password: '{{ sqlserver_installer.account.password }}'
+  #     SQLSysAdminAccounts:      '{{ sqlserver_common.sysadmin.domain }}\{{ sqlserver_common.sysadmin.username }}'
+  #     InstanceName:             '{{ sqlserver_common.instance_name }}'
+  #   tags:
+  #   - engine    
 
 #    xSqlServerFirewall ($Node.NodeName + $SQLInstanceName)
 #    {
@@ -137,11 +203,11 @@
 #        InstanceName = $SQLInstanceName
 #        Features = $Features
 #    }    
-  - name:
-    win_sqlserverfirewall:
-      SourcePath:               '{{ sqlserver_installer.binaries_path }}'  
-      Features:                 '{{ sqlserver_common.features | join(",") }}'
-      InstanceName:             '{{ sqlserver_common.instance_name }}'
-    tags:
-    - firewall
+  # - name:
+  #   win_sqlserverfirewall:
+  #     SourcePath:               '{{ sqlserver_installer.binaries_path }}'  
+  #     Features:                 '{{ sqlserver_common.features | join(",") }}'
+  #     InstanceName:             '{{ sqlserver_common.instance_name }}'
+  #   tags:
+  #   - firewall
       

@@ -1,0 +1,17 @@
+- name: Create Local users
+  block:
+  - name: Create Local Users
+    win_user:
+      name:       '{{ item.username }}'
+      password:   '{{ item.password }}'
+      groups:
+      - Users
+      Ensure: 'Present'
+    with_items: 
+    - '{{ windows_bootstrap_users }}'
+    register: user_status
+
+  - name: Display user_status
+    debug: 
+      var: user_status 
+      verbosity: '{{ windows_bootstrap_diagnostic_level_debug }}'

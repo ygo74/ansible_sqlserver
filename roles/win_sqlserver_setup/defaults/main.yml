@@ -1,0 +1,4 @@
+win_sqlserver_setup_action_install: 'install'
+
+
+win_sqlserver_setup_action: 'install'

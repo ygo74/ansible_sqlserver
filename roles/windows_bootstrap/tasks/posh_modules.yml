@@ -1,0 +1,8 @@
+- name: Ensure PowershellGet and package Management
+  block: 
+  - name: Add package Management and Powershell Get
+    win_psmodule:
+      name: '{{ item.name }}'
+      state: present
+    with_items:
+    - '{{ windows_bootstrap_powershell_modules }}'
