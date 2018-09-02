@@ -1,5 +1,24 @@
+- name: Check Mandatory variables
+  fail:
+    msg: '{{ item }} is mandatory'
+  when: item is undefined
+  with_items:
+  - 'win_sqlserver_setup_source_path'
+  - 'win_sqlserver_setup_engine_service_account'
+  - 'win_sqlserver_setup_agent_service_account'
+  - 'win_sqlserver_setup_system_admins'
+  tags:
+  - check_roles_var
+
+
 - name: Import tasks for users and group management
-  import_tasks: install.yml
+  import_tasks: 10-install.yml
   when: win_sqlserver_setup_action == win_sqlserver_setup_action_install
   tags:
   - install_from_scratch
+
+- name: Import tasks for users and group management
+  import_tasks: 20-configure.yml
+  when: win_sqlserver_setup_action == win_sqlserver_setup_action_configure
+  tags:
+  - configure

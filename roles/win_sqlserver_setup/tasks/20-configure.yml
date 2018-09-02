@@ -1,0 +1,19 @@
+- name: Apply sql server Options
+  block:
+    - name: Apply sql server Options
+      win_dsc:
+        resource_name:  SqlServerConfiguration 
+        InstanceName:   'MSSQLSERVER'
+        OptionName:     '{{ item.name }}'
+        OptionValue:    '{{ item.value }}'
+      with_items:
+      - name: 'clr enabled'        
+        value: 1
+      register: sqlserver_configuration_results  
+
+    - name: Display SQL Server configuration results
+      debug:
+        var: sqlserver_configuration_results         
+        
+  tags:
+  - sqlserver_configuration

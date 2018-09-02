@@ -1,0 +1,39 @@
+- name: Install SQL Server
+  block:
+
+  - name: install sql server
+    win_dsc:
+      resource_name:          SqlSetup
+      InstanceName:           '{{ win_sqlserver_setup_instance_name }}'
+      Features:               '{{ win_sqlserver_setup_features }}'
+      SQLCollation:           '{{ win_sqlserver_setup_collation }}'
+      SQLSvcAccount_username: '{{ win_sqlserver_setup_domain_users }}\{{ win_sqlserver_setup_engine_service_account.username }}'
+      SQLSvcAccount_password: '{{ win_sqlserver_setup_engine_service_account.password }}'
+      AgtSvcAccount_username: '{{ win_sqlserver_setup_domain_users }}\{{ win_sqlserver_setup_agent_service_account.username }}'
+      AgtSvcAccount_password: '{{ win_sqlserver_setup_agent_service_account.password }}'
+      SQLSysAdminAccounts:    '{{ win_sqlserver_setup_system_admins }}'
+      InstallSharedDir:       '{{ win_sqlserver_setup_install_shared_dir }}'
+      InstallSharedWOWDir:    '{{ win_sqlserver_setup_install_shared_wow_dir }}'
+      InstanceDir:            '{{ win_sqlserver_setup_instance_dir }}'
+      InstallSQLDataDir:      '{{ win_sqlserver_setup_sql_data_dir }}'
+      SQLUserDBDir:           '{{ win_sqlserver_setup_sql_user_db_dir }}'
+      SQLUserDBLogDir:        '{{ win_sqlserver_setup_sql_user_db_log_dir }}'
+      SQLTempDBDir:           '{{ win_sqlserver_setup_sql_temp_db_dir }}'
+      SQLTempDBLogDir:        '{{ win_sqlserver_setup_sql_temp_db_log_dir }}'
+      SQLBackupDir:           '{{ win_sqlserver_setup_backup_dir }}'
+      SourcePath:             '{{ disk_image_result.mount_path }}'
+      UpdateEnabled:          '{{ win_sqlserver_setup_update_enabled }}'
+      ForceReboot:            false
+      BrowserSvcStartupType:  '{{ win_sqlserver_setup_browser_startup_type }}'
+      PsDscRunAsCredential_username: '{{ ansible_user }}'
+      PsDscRunAsCredential_password: '{{ ansible_password }}'
+
+  - name: Activate Windows Firewall rules
+    win_dsc:
+      resource_name:  SqlWindowsFirewall
+      SourcePath:     '{{ disk_image_result.mount_path }}'
+      InstanceName:   '{{ win_sqlserver_setup_instance_name }}'
+      Features:       '{{ win_sqlserver_setup_features }}'
+
+tags:
+- sqlserver_install

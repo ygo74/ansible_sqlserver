@@ -110,7 +110,7 @@
     tags:
     - sqlserver_install
 
-  - name: Install SQL Serer Management studio
+  - name: Install SQL Server Management studio
     block:
     - name: Ensure Sources directory
       win_file:
