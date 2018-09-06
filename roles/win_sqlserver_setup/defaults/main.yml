@@ -14,11 +14,13 @@ win_sqlserver_setup_install_shared_wow_dir:    'C:\Program Files (x86)\Microsoft
 
 win_sqlserver_setup_instance_dir:              'C:\Program Files\Microsoft SQL Server'
 win_sqlserver_setup_sql_data_dir:              'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
-win_sqlserver_setup_sql_user_db_dir:           'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
-win_sqlserver_setup_sql_user_db_log_dir:       'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
-win_sqlserver_setup_sql_temp_db_dir:           'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
-win_sqlserver_setup_sql_temp_db_log_dir:       'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
+win_sqlserver_setup_sql_user_db_dir:           '{{ win_sqlserver_setup_sql_data_dir }}'
+win_sqlserver_setup_sql_user_db_log_dir:       '{{ win_sqlserver_setup_sql_data_dir }}'
+win_sqlserver_setup_sql_temp_db_dir:           '{{ win_sqlserver_setup_sql_data_dir }}'
+win_sqlserver_setup_sql_temp_db_log_dir:       '{{ win_sqlserver_setup_sql_data_dir }}'
 win_sqlserver_setup_backup_dir:                'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Backup'
+
+win_sqlserver_setup_install_log:               'C:\Program Files\Microsoft SQL Server\130\Setup Bootstrap\Log\Summary.txt'
 
 win_sqlserver_setup_update_enabled:            false
 win_sqlserver_setup_browser_startup_type:      'Automatic'

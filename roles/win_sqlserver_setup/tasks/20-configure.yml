@@ -3,9 +3,10 @@
     - name: Apply sql server Options
       win_dsc:
         resource_name:  SqlServerConfiguration 
-        InstanceName:   'MSSQLSERVER'
+        InstanceName:   '{{ win_sqlserver_setup_instance_name }}'
         OptionName:     '{{ item.name }}'
         OptionValue:    '{{ item.value }}'
+        ServerName:     '{{ inventory_hostname }}'
       with_items:
       - name: 'clr enabled'        
         value: 1
@@ -16,4 +17,4 @@
         var: sqlserver_configuration_results         
         
   tags:
-  - sqlserver_configuration
+  - configure_sqlserver

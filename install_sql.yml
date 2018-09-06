@@ -36,20 +36,6 @@
 #      - AS
 #      - IS
       
-    instance_name: 'MSSQL'
-    
-    sqlserver_installer:
-      binaries_path: 'F:\'
-      download_packages_path:       'D:\SQlServer'
-      
-      dscResources:
-      - xSQLServer
-      
-      account:
-        domain:   '{{ account_installer_domain | default(inventory_hostname | upper ) }}'  
-        username: '{{ account_installer_username }}'
-        password: '{{ account_installer_password }}'
-  
   roles:
   - name: Bootstrap server for sql installation
     role: windows_bootstrap
@@ -59,56 +45,20 @@
     tags:
     - windows_bootstrap
 
-  tasks:
-
   - name: Install SQL Server
-    block:
-    - name: Mount the Sharepoint image
-      win_disk_image:
-        image_path: 'D:\en_sql_server_2016_standard_with_service_pack_2_x64_dvd_12124191.iso'
-        state: present
-      register: disk_image_result
-
-    - name: Display mount image result
-      debug:
-        var: disk_image_result       
-
-    - name: install sql server
-      win_dsc:
-        resource_name:  SqlSetup
-        InstanceName:   'MSSQLSERVER'
-        Features:       'SQLENGINE'
-        SQLCollation:   'SQL_Latin1_General_CP1_CI_AS'
-        SQLSvcAccount_username: '{{ sqlserver_users.sql_engine_service.domain }}\{{ sqlserver_users.sql_engine_service.username }}'
-        SQLSvcAccount_password: '{{ sqlserver_users.sql_engine_service.password }}'
-        AgtSvcAccount_username: '{{ sqlserver_users.sql_agent_service.domain }}\{{ sqlserver_users.sql_agent_service.username }}'
-        AgtSvcAccount_password: '{{ sqlserver_users.sql_agent_service.password }}'
-        SQLSysAdminAccounts:    '{{ sqlserver_users.sysadmin.domain }}\{{ sqlserver_users.sysadmin.username }}'
-        InstallSharedDir:       'C:\Program Files\Microsoft SQL Server'
-        InstallSharedWOWDir:    'C:\Program Files (x86)\Microsoft SQL Server'
-        InstanceDir:            'C:\Program Files\Microsoft SQL Server'
-        InstallSQLDataDir:      'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
-        SQLUserDBDir:           'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
-        SQLUserDBLogDir:        'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
-        SQLTempDBDir:           'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
-        SQLTempDBLogDir:        'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Data'
-        SQLBackupDir:           'C:\Program Files\Microsoft SQL Server\MSSQL13.MSSQLSERVER\MSSQL\Backup'
-        SourcePath:             '{{ disk_image_result.mount_path }}'
-        UpdateEnabled:          false
-        ForceReboot:            false
-        BrowserSvcStartupType:  'Automatic'
-        PsDscRunAsCredential_username: '{{ ansible_user }}'
-        PsDscRunAsCredential_password: '{{ ansible_password }}'
-
-    - name: Activate Windows Firewall rules
-      win_dsc:
-        resource_name:  SqlWindowsFirewall
-        SourcePath:     '{{ disk_image_result.mount_path }}'
-        InstanceName:   'MSSQLSERVER'
-        Features:       'SQLENGINE'
-
+    role: win_sqlserver_setup
+    win_sqlserver_setup_sql_data_dir:           'd:\SQlDATA'
+    win_sqlserver_setup_instance_name:          'YGO2'
+    win_sqlserver_setup_instance_dir:           'd:\MSSQL'
+    win_sqlserver_setup_engine_service_account: '{{ sqlserver_users.sql_engine_service }}'
+    win_sqlserver_setup_agent_service_account:  '{{ sqlserver_users.sql_agent_service }}'
+    win_sqlserver_setup_system_admins:          '{{ sqlserver_users.sysadmin.domain }}\{{ sqlserver_users.sysadmin.username }}'
+    win_sqlserver_setup_iso_path:               'D:\en_sql_server_2016_standard_with_service_pack_2_x64_dvd_12124191.iso'
+    win_sqlserver_setup_domain_users:           'srv1'
     tags:
-    - sqlserver_install
+    - install_sqlserver
+
+  tasks:
 
   - name: Install SQL Server Management studio
     block:

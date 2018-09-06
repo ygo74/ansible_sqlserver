@@ -1,0 +1,33 @@
+- name: Bootstratp windows server
+  hosts: sql2016
+
+  tasks:
+  - name: Ensure PowershellGet and package Management
+    block: 
+    - name: Add package Management and Powershell Get
+      win_psmodule:
+        name: '{{ item }}'
+        state: present
+      with_items:
+      - 'PackageManagement'
+      - 'PowershellGet'        
+
+    tags:
+    - powershell_infrastructure  
+
+  - name: Ensure Azure storage access
+    block: 
+    - name: Map Z to azure storage account
+      # win_mapped_drive:
+      #   letter:   Z
+      #   path:     \\csb66bba86e3454x43a7x81a.file.core.windows.net\common-packages
+      #   username: 'Azure\csb66bba86e3454x43a7x81a'
+      #   password: 'Rp4iWO/LVe1wmBYp6GqVkfTCUrBFbygYJLluHa0rX89+Ktebpo314Ekr3XXok+DfS+QfjH/RyBkBXPiVMTuEDA=='
+      #   state:    'present'
+      win_shell: |
+          $acctKey = ConvertTo-SecureString -String "Rp4iWO/LVe1wmBYp6GqVkfTCUrBFbygYJLluHa0rX89+Ktebpo314Ekr3XXok+DfS+QfjH/RyBkBXPiVMTuEDA==" -AsPlainText -Force
+          $credential = New-Object System.Management.Automation.PSCredential -ArgumentList "Azure\csb66bba86e3454x43a7x81a", $acctKey
+          New-PSDrive -Name Z -PSProvider FileSystem -Root "\\csb66bba86e3454x43a7x81a.file.core.windows.net\common-packages" -Credential $credential -Persist
+
+    tags:
+    - azure_infrastructure  
