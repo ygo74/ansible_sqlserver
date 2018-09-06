@@ -49,11 +49,8 @@
     register: error_log
 
   - name: Display error log 
-    fail:
-      msg: '{{ item }}'
-    with_items:
-    - '{{ error_log.stdout_lines }}'      
-    ignore_errors: true
+    debug:
+      var: error_log.stdout_lines
 
   - name: Fail 
     fail:
