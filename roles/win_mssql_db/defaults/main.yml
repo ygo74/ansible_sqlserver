@@ -1,0 +1,10 @@
+---
+# defaults file for win_mssql_db
+
+
+#Default MSSQL Instances on localhost
+win_mssql_db_instance_name: 'MSSQLSERVER'
+win_mssql_db_server_name:   'localhost'
+
+#Default databases:
+win_mssql_db_databases: []

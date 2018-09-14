@@ -1,0 +1,45 @@
+#- name: Apply sql server Options
+- block:
+    - name: Apply sql server Options
+      win_dsc:
+        resource_name:  SqlServerConfiguration 
+        ServerName:     '{{ win_mssql_engine_server_name }}'
+        InstanceName:   '{{ win_mssql_engine_instance_name }}'
+        OptionName:     '{{ item.name }}'
+        OptionValue:    '{{ item.value }}'
+      with_items:
+      - name: 'clr enabled'        
+        value: 1
+      register: sqlserver_configuration_results  
+
+    - name: Display SQL Server configuration results
+      debug:
+        var: sqlserver_configuration_results         
+        
+  tags:
+  - configure_sqlserver
+
+#- name: Update default datbase location
+- block:
+    - name: Update Data Location
+      win_dsc:
+        resource_name:  SqlDatabaseDefaultLocation  
+        ServerName:     '{{ win_mssql_engine_server_name }}'
+        InstanceName:   '{{ win_mssql_engine_instance_name }}'
+        Type:           '{{ item.type }}'
+        Path:           '{{ item.path }}'
+      with_items:
+      - type: 'Data'        
+        path: '{{win_mssql_engine_sql_user_db_dir }}'
+      - type: 'Log'  
+        path: '{{win_mssql_engine_sql_user_db_log_dir }}'
+      - type: 'Backup'  
+        path: '{{win_mssql_engine_backup_dir }}'
+      register: sqlserver_defaultlocation_results  
+
+    - name: Display SQL Server default location results
+      debug:
+        var: sqlserver_defaultlocation_results         
+        
+  tags:
+  - configure_sqlserver_default_location

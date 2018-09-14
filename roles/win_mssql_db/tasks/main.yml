@@ -1,0 +1,10 @@
+---
+# tasks file for win_mssql_db
+- name: Check Mandatory variables
+  fail:
+    msg: '{{ item }} is mandatory'
+  when: item is undefined
+  with_items:
+  - 'win_mssql_db_databases'
+  tags:
+  - always

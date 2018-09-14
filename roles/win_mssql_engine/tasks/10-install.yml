@@ -1,0 +1,98 @@
+- name: Mount iso file
+  block:
+
+  - name: Mount the SQL Server iso 
+    win_disk_image:
+      image_path: '{{ win_mssql_engine_iso_path }}'
+      state: present
+    register: disk_image_result
+
+  - name: Display mount image result
+    debug:
+      var: disk_image_result       
+
+  tags:
+  - install_sqlserver_engine
+
+- name: Execute SQl Server setup
+  block:
+  - name: install sql server
+    win_dsc:
+      resource_name:          SqlSetup
+      InstanceName:           '{{ win_mssql_engine_instance_name }}'
+      Features:               '{{ win_mssql_engine_features }}'
+      SQLCollation:           '{{ win_mssql_engine_collation }}'
+      SQLSvcAccount_username: '{{ win_mssql_engine_domain_users }}\{{ win_mssql_engine_engine_service_account.username }}'
+      SQLSvcAccount_password: '{{ win_mssql_engine_engine_service_account.password }}'
+      AgtSvcAccount_username: '{{ win_mssql_engine_domain_users }}\{{ win_mssql_engine_agent_service_account.username }}'
+      AgtSvcAccount_password: '{{ win_mssql_engine_agent_service_account.password }}'
+      SQLSysAdminAccounts:    '{{ win_mssql_engine_system_admins }}'
+      InstallSharedDir:       '{{ win_mssql_engine_install_shared_dir }}'
+      InstallSharedWOWDir:    '{{ win_mssql_engine_install_shared_wow_dir }}'
+      InstanceDir:            '{{ win_mssql_engine_instance_dir }}'
+      InstallSQLDataDir:      '{{ win_mssql_engine_sql_data_dir }}'
+      SQLUserDBDir:           '{{ win_mssql_engine_sql_user_db_dir }}'
+      SQLUserDBLogDir:        '{{ win_mssql_engine_sql_user_db_log_dir }}'
+      SQLTempDBDir:           '{{ win_mssql_engine_sql_temp_db_dir }}'
+      SQLTempDBLogDir:        '{{ win_mssql_engine_sql_temp_db_log_dir }}'
+      SQLBackupDir:           '{{ win_mssql_engine_backup_dir }}'
+      SourcePath:             '{{ disk_image_result.mount_path }}'
+      UpdateEnabled:          '{{ win_mssql_engine_update_enabled }}'
+      ForceReboot:            false
+      BrowserSvcStartupType:  '{{ win_mssql_engine_browser_startup_type }}'
+      PsDscRunAsCredential_username: '{{ ansible_user }}'
+      PsDscRunAsCredential_password: '{{ ansible_password }}'
+
+  rescue:
+  - name: Retrieve log files
+    win_shell: Get-Content '{{ win_mssql_engine_install_log }}'
+    register: error_log
+
+  - name: Display error log 
+    debug:
+      var: error_log.stdout_lines
+
+  - name: Fail 
+    fail:
+      msg: 'Error during installation'
+
+  tags:
+  - install_sqlserver_engine
+
+- name: Activate Windows Firewall rules
+  block:
+  - name: Activate Windows Firewall rules
+    win_dsc:
+      resource_name:  SqlWindowsFirewall
+      SourcePath:     '{{ disk_image_result.mount_path }}'
+      InstanceName:   '{{ win_mssql_engine_instance_name }}'
+      Features:       '{{ win_mssql_engine_features }}'
+
+  tags:
+  - install_sqlserver_engine
+
+- name: Install SQL Server
+  block:
+  - name: Ensure Sources directory
+    win_file:
+      path:  'c:\sources'
+      state: directory
+
+  - name: Download SQl Server Management studio
+    win_get_url:
+      url:  'https://download.microsoft.com/download/0/5/B/05B2AF8F-906F-4C57-A58E-5780F64F9D62/SSMS-Setup-ENU.exe'
+      dest: 'c:\sources\SSMS-Setup-ENU.exe'
+
+  - name: Install SQL Server Management studio
+    win_package:
+      name:       'SSMS-Setup-ENU'
+      path:       'c:\sources\SSMS-Setup-ENU.exe'
+      product_id: '31769AA7-DDF3-463E-9E25-752362EAA5B2'
+      arguments:  '/install /passive /norestart'
+
+  when: win_mssql_engine_install_management_studio | default(false)
+  tags:
+  - install_sql_management_studio
+
+- name: Import tasks for configuration to sql server engine
+  import_tasks: 20-configure.yml

@@ -1,0 +1,24 @@
+- name: Check Mandatory variables
+  fail:
+    msg: '{{ item }} is mandatory'
+  when: item is undefined
+  with_items:
+  - 'win_mssql_engine_iso_path'
+  - 'win_mssql_engine_engine_service_account'
+  - 'win_mssql_engine_agent_service_account'
+  - 'win_mssql_engine_system_admins'
+  tags:
+  - always
+
+
+- name: Import tasks for sql server installation engine qnd management studio
+  import_tasks: 10-install.yml
+  when: win_mssql_engine_action == win_mssql_engine_action_install
+  tags:
+  - install_from_scratch
+
+- name: Import tasks for configuration to sql server engine
+  import_tasks: 20-configure.yml
+  when: win_mssql_engine_action == win_mssql_engine_action_configure
+  tags:
+  - configure
