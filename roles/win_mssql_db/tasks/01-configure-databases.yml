@@ -1,0 +1,48 @@
+#-name: Configure Databases
+- block:
+  - name: Create Database
+    win_dsc:
+      resource_name:          SqlDatabase 
+      InstanceName:           '{{ win_mssql_db_instance_name }}'
+      ServerName:             '{{ win_mssql_db_server_name }}'
+      Name:                   '{{ item.name }}'
+      Ensure:                 '{{ item.status | default("Present") }}'
+    with_items:
+    - '{{ win_mssql_db_databases }}'      
+
+  - name: Ensure Sql Login for Database Owner
+    win_dsc:
+      resource_name:          SqlServerLogin  
+      InstanceName:           '{{ win_mssql_db_instance_name }}'
+      ServerName:             '{{ win_mssql_db_server_name }}'
+      LoginType:              '{{ item.owner.login_type | default("WindowsUser") }}'
+      # Name:                   |
+      #                         {%- if item.owner.login_type | default("WindowsUser") == "WindowsUser"  -%}
+      #                           {{ item.owner.domain | default(win_mssql_db_server_name) }}\{{ item.owner.username }}
+      #                         {%- else -%}
+      #                           {{ item.owner.username }}
+      #                         {%- endif -%}      
+      Name: '{{ item.owner.domain | default(win_mssql_db_server_name) }}\{{ item.owner.username }}'
+    when: item.owner is defined   
+    with_items:
+    - '{{ win_mssql_db_databases }}'      
+
+  - name: Add Database Owner
+    win_dsc:
+      resource_name:          SqlDatabaseOwner  
+      InstanceName:           '{{ win_mssql_db_instance_name }}'
+      ServerName:             '{{ win_mssql_db_server_name }}'
+      Database:               '{{ item.name }}'
+      # Name:                   |
+      #                         {%- if item.owner.login_type | default("WindowsUser") == "WindowsUser"  -%}
+      #                           {{ item.owner.domain | default(win_mssql_db_server_name) }}\{{ item.owner.username }}
+      #                         {%- else -%}
+      #                           {{ item.owner.username }}
+      #                         {%- endif -%}      
+      Name: '{{ item.owner.domain | default(win_mssql_db_server_name) }}\{{ item.owner.username }}'
+    when: item.owner is defined   
+    with_items:
+    - '{{ win_mssql_db_databases }}'      
+
+  tags:
+  - configure_database      

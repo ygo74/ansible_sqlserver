@@ -1,0 +1,38 @@
+#- name: Ensure Database file size
+- block:
+#  - name: Ensure Database file size
+#    win_dsc:
+#      resource_name:          Script
+#      GetScript: 'return '
+#      SetScript: ''
+#      TestScript: |
+#                   $server = New-Object ("Microsoft.SqlServer.Management.Smo.Server") "(local)"
+#                   [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
+#                   $database = $Server.Databases | ? {$_.Name -eq "firstdb"}
+#                   if ($null -eq $database) {
+#                       throw new-Object System.Exception "Database not found"
+#                   }
+
+
+  - name: Test Sql Script
+    win_dsc:
+      resource_name:          'SqlScriptQuery'
+      ServerInstance:         '{{ win_mssql_db_server_name }}'         
+      GetQuery: |
+                    SELECT Name FROM sys.databases WHERE Name = '{{ test_datbase_name }}' FOR JSON AUTO
+      SetQuery: |
+                    CREATE DATABASE [{{ test_datbase_name }}]
+      TestQuery: |
+                    if (select count(name) from sys.databases where name = '{{ test_datbase_name }}') = 0
+                        BEGIN
+                            RAISERROR ('Did not find database [{{ test_datbase_name }}]', 16, 1)
+                        END
+                    ELSE
+                        BEGIN
+                            PRINT 'Found database [{{ test_datbase_name }}]'
+                        END
+    register: sql_results
+
+  - name: Display sql_results
+    debug:
+      var: sql_results         
