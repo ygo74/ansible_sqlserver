@@ -1,4 +1,5 @@
-- hosts: sql2016
+- name: Install SQL Server Engine
+  hosts: sql2016
   gather_facts: false
   
 
@@ -14,19 +15,28 @@
     - name: 'PackageManagement'
     - name: 'PowershellGet'
     - name: 'SqlServerDsc'
+    - name: 'SqlServer'
 
     sqlserver_users:
       sysadmin:
-        domain:   'SRV1'
+        domain:   'win-mssql-1'
         username: 'sqladmin'
         password: 'temporaryPassword.1'
       sql_engine_service:
-        domain:   'SRV1'
+        domain:   'win-mssql-1'
         username: 'sqlsvc'
         password: 'temporaryPassword.1'
       sql_agent_service:
-        domain:   'SRV1'
+        domain:   'win-mssql-1'
         username: 'sqlagent'
+        password: 'temporaryPassword.1'
+      firstdbowner:
+        domain:   'win-mssql-1'
+        username: 'firstdbowner'
+        password: 'temporaryPassword.1'
+      firstdbuser:
+        domain:   'win-mssql-1'
+        username: 'firstdbuser'
         password: 'temporaryPassword.1'
 
     databases:
@@ -36,36 +46,31 @@
   roles:
   - name: Bootstrap server for sql installation
     role: windows_bootstrap
-    windows_bootstrap_features: '{{ windows_features }}'
-    windows_bootstrap_users:    '{{ sqlserver_users.values() }}'
+    windows_bootstrap_features:           '{{ windows_features }}'
+    windows_bootstrap_users:              '{{ sqlserver_users.values() }}'
     windows_bootstrap_powershell_modules: '{{ powershell_modules }}'
     tags:
     - windows_bootstrap
 
   - name: Install SQL Server
-    role: win_sqlserver_setup
-    win_sqlserver_setup_sql_data_dir:           'd:\SQlDATA'
-    win_sqlserver_setup_instance_name:          'YGO2'
-    win_sqlserver_setup_instance_dir:           'd:\MSSQL'
-    win_sqlserver_setup_engine_service_account: '{{ sqlserver_users.sql_engine_service }}'
-    win_sqlserver_setup_agent_service_account:  '{{ sqlserver_users.sql_agent_service }}'
-    win_sqlserver_setup_system_admins:          '{{ sqlserver_users.sysadmin.domain }}\{{ sqlserver_users.sysadmin.username }}'
-    win_sqlserver_setup_iso_path:               'D:\en_sql_server_2016_standard_with_service_pack_2_x64_dvd_12124191.iso'
-    win_sqlserver_setup_domain_users:           'srv1'
-    tags:
-    - install_sqlserver
+    role: win_mssql_engine
+    win_mssql_engine_server_name:            'win-mssql-1'
+    win_mssql_engine_engine_service_account: '{{ sqlserver_users.sql_engine_service }}'
+    win_mssql_engine_agent_service_account:  '{{ sqlserver_users.sql_agent_service }}'
+    win_mssql_engine_system_admins:          '{{ sqlserver_users.sysadmin.domain }}\{{ sqlserver_users.sysadmin.username }}'
+    win_mssql_engine_iso_path:               'D:\en_sql_server_2016_standard_with_service_pack_2_x64_dvd_12124191.iso'
+    win_mssql_engine_domain_users:           'win-mssql-1'
 
-  tasks:
-
-  - name: Create Database
-    win_dsc:
-      resource_name:          SqlDatabase 
-      InstanceName:           'YGO'
-      ServerName:             'srv1'
-      Name:                   '{{ databases.test.name }}'
-    tags:
-    - create_database      
-
-
-
+  - name: Configure Database
+    role: win_mssql_db
+    win_mssql_db_server_name:            'win-mssql-1'
+    win_mssql_db_databases:
+    - name: firstdb
+      owner: '{{ sqlserver_users.firstdbowner }}'
+    win_mssql_db_users:
+    - database_name:  'firstdb'
+      user:           '{{ sqlserver_users.firstdbuser }}'
+      permissions:
+      - type: 'Grant'
+        permissions: 'Connect, Update'
 

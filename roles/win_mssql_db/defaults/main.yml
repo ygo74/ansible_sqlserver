@@ -1,10 +1,14 @@
 ---
 # defaults file for win_mssql_db
 
+win_mssql_db_action_configure:          'configure'
+win_mssql_db_action:                    'configure'
+
 
 #Default MSSQL Instances on localhost
 win_mssql_db_instance_name: 'MSSQLSERVER'
-win_mssql_db_server_name:   'localhost'
+win_mssql_db_server_name:   '{{ inventory_hostname }}'
 
 #Default databases:
 win_mssql_db_databases: []
+win_mssql_db_users:     []

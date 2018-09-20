@@ -8,3 +8,21 @@
   - 'win_mssql_db_databases'
   tags:
   - always
+
+- name: Import tasks to configure database
+  import_tasks: 01-configure-databases.yml
+  when: win_mssql_db_action == win_mssql_db_action_configure
+  tags:
+  - configure_databases
+
+- name: Import tasks to configure users
+  import_tasks: 02-configure-users.yml
+  when: win_mssql_db_action == win_mssql_db_action_configure
+  tags:
+  - configure_users
+
+- name: Import tasks to configure users
+  import_tasks: 03-configure-database-files.yml
+  when: win_mssql_db_action == win_mssql_db_action_configure
+  tags:
+  - configure_database_files

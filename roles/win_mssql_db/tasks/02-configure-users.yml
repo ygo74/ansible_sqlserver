@@ -1,17 +1,57 @@
-#- name: "Add users and roles for a Datbase"
+#- name: "Add users and roles for a Database"
 - block:
   - name: Ensure Sql Login
     win_dsc:
       resource_name:          SqlServerLogin  
+      Ensure:                 '{{ item.status | default("Present") }}'
       InstanceName:           '{{ win_mssql_db_instance_name }}'
       ServerName:             '{{ win_mssql_db_server_name }}'
-      LoginType:              '{{ item.login_type }}'
-      Name:                   >
-                              {%- if item.login_type == "WindowsUser"  -%}
-                                {{ item.domain | default(win_mssql_db_server_name) }}\{{ item.username }}
-                              {%- else -%}
-                                {{ item.username }}
-                              {%- endif -%}      
-    when: item.owner is defined   
+      LoginType:              '{{ item.user.login_type | default("WindowsUser") }}'
+    #   Name:                   >
+    #                           {%- if item..user.login_type | default("WindowsUser") == "WindowsUser"  -%}
+    #                             {{ item.user.domain | default(win_mssql_db_server_name) }}\{{ item.user.username }}
+    #                           {%- else -%}
+    #                             {{ item.user.username }}
+    #                           {%- endif -%}      
+      Name:                   '{{ item.user.domain | default(win_mssql_db_server_name) }}\{{ item.user.username }}'
+    when: item.user is defined   
     with_items:
-    - '{{ win_mssql_db_users }}'      
+    - '{{ win_mssql_db_users }}' 
+    register: sql_login_results  
+
+  - name: Display SQL Login results
+    debug:
+      var: sql_login_results         
+
+  - name: Apply Database permissions 
+    win_dsc:
+      resource_name:          SqlDatabasePermission   
+      Ensure:                 '{{ item.0.status | default("Present") }}'
+      InstanceName:           '{{ win_mssql_db_instance_name }}'
+      ServerName:             '{{ win_mssql_db_server_name }}'
+      Database:               '{{ item.0.database_name }}'
+      Permissions:            '{{ item.1.permissions }}'
+      PermissionState:        '{{ item.1.type }}'          
+    #   Name:                   >
+    #                           {%- if item..user.login_type | default("WindowsUser") == "WindowsUser"  -%}
+    #                             {{ item.user.domain | default(win_mssql_db_server_name) }}\{{ item.user.username }}
+    #                           {%- else -%}
+    #                             {{ item.user.username }}
+    #                           {%- endif -%}      
+      Name:                   '{{ item.0.user.domain | default(win_mssql_db_server_name) }}\{{ item.0.user.username }}'
+    when: item.0.user is defined   
+    with_subelements:
+    - '{{ win_mssql_db_users }}' 
+    - 'permissions'
+    register: sql_permissions_results
+
+  - name: Display SQL Permissions results
+    debug:
+      var: sql_permissions_results         
+
+  - name: "Display list of users"
+    debug:
+      msg: "Apply permission on {{ item.0.database_name }} for user {{ item.0.user.username }} and {{ item.1.type }} permission {{ item.1.permissions }}"         
+    with_subelements:
+    - '{{ win_mssql_db_users }}' 
+    - 'permissions'
